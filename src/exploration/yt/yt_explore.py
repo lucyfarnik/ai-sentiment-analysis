@@ -8,10 +8,11 @@ import pandas as pd
 sys.path.append(os.path.abspath('.'))
 from src.constants import google_key as key
 
-num_comments = int(1e5)
+num_comments = 1e5
 query = 'AI'
 date_range_start = '2018-01-01T00:00:00Z'
 date_range_end = '2020-01-01T00:00:00Z'
+should_classify = False
 
 # init the classifier
 classifier = transformers.pipeline('sentiment-analysis',
@@ -46,7 +47,8 @@ for page_i in range(math.ceil(num_comments / (50*50))):
             'title': x['snippet']['title'],
             'date': x['snippet']['publishedAt'],
             }
-            for x in vid_res['items']]
+            for x in vid_res['items']
+            if 'id' in x and 'videoId' in x['id']]
 
   # for each video, get the comments
   for vid_i, vid in enumerate(videos):
@@ -59,7 +61,11 @@ for page_i in range(math.ceil(num_comments / (50*50))):
         'maxResults': 50,
     }).json()
     if 'error' in com_res: # TODO error handling
-      print(com_res['error'])
+      if 'disabled comments.' not in com_res['error']['message']:
+        print(com_res['error'])
+      continue
+    if len(com_res['items']) == 0:
+      # no comments
       continue
     vid_comments = [{'id': x['id'],
                 'text': x['snippet']['topLevelComment']['snippet']['textDisplay'],
@@ -71,10 +77,12 @@ for page_i in range(math.ceil(num_comments / (50*50))):
                 }
                 for x in com_res['items']]
 
-    # classify the text
-    cls_res = classifier([com['text'][:512] for com in vid_comments])
-    for com_i, cls in enumerate(cls_res):
-      vid_comments[com_i]['sentiment'] = cls
+    if should_classify:
+      # classify the text
+      cls_res = classifier([com['text'][:512] for com in vid_comments])
+      for com_i, cls in enumerate(cls_res):
+        vid_comments[com_i]['sentiment_label'] = cls['label']
+        vid_comments[com_i]['sentiment_score'] = cls['score']
 
     # get the channel of the user who posted it to find the country
     chan_res = requests.get('https://www.googleapis.com/youtube/v3/channels', {
