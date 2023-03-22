@@ -37,6 +37,8 @@ for page_i in range(math.ceil(num_comments / (50*50))):
   if date_range_end is not None:
     vid_req_params['publishedBefore'] = date_range_end
   
+  # note that doing search programmatically uses 100 quota points while the other requests only take 1
+  # we could get around the quota by doing this part with web scraping
   vid_res = requests.get('https://www.googleapis.com/youtube/v3/search',
                          vid_req_params).json()
   if 'error' in vid_res: # TODO error handling
