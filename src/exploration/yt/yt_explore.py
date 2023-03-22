@@ -1,8 +1,12 @@
+import os
+import sys
 import requests
 import transformers
 import numpy as np
 
-key = 'AIzaSyDvuHBARz2o65ylSX_orvHASPCN0xHtxes'
+sys.path.append(os.path.abspath('.'))
+from src.constants import google_key as key
+
 classifier = transformers.pipeline("sentiment-analysis")
 
 vid_res = requests.get('https://www.googleapis.com/youtube/v3/search', {
