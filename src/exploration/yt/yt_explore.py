@@ -29,6 +29,9 @@ for page_i in range(math.ceil(num_comments / (50*50))):
       'maxResults': 50,
   }
   if next_page_token is not None: # pagination
+    if next_page_token is '_INVALID_':
+      print(f"Invalid next page token for {page_i=}")
+      break
     vid_req_params['pageToken'] = next_page_token
 
   # date range
@@ -39,12 +42,14 @@ for page_i in range(math.ceil(num_comments / (50*50))):
   
   # note that doing search programmatically uses 100 quota points while the other requests only take 1
   # we could get around the quota by doing this part with web scraping
+  # (we can currently get ~100k comments per day (per API key))
   vid_res = requests.get('https://www.googleapis.com/youtube/v3/search',
                          vid_req_params).json()
   if 'error' in vid_res: # TODO error handling
     print(vid_res['error'])
     continue
-  next_page_token = vid_res['nextPageToken'] # store page token
+   # store page token
+  next_page_token = vid_res['nextPageToken'] if 'nextPageToken' in vid_res else '_INVALID_'
   videos = [{'id': x['id']['videoId'],
             'title': x['snippet']['title'],
             'date': x['snippet']['publishedAt'],
@@ -107,5 +112,5 @@ for page_i in range(math.ceil(num_comments / (50*50))):
 
 # save the fetched data
 df = pd.DataFrame(comments)
-print(df.shape, df.head())
+print(f'{df.shape=}')
 df.to_csv('data/yt_data.csv')
