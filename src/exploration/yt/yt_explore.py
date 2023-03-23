@@ -61,6 +61,7 @@ for page_i in range(math.ceil(num_comments / (50*50))):
         'part': 'snippet',
         'videoId': vid['id'],
         'maxResults': 50,
+        'textFormat': 'plainText',
     }).json()
     if 'error' in com_res: # TODO error handling
       if 'disabled comments.' not in com_res['error']['message']:
