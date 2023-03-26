@@ -8,19 +8,20 @@ import pandas as pd
 sys.path.append(os.path.abspath('.'))
 from src.constants import google_key as key
 
-num_vids = 1e3
+num_vids = 1e4
 query = 'ai|"artificial intelligence" -ad -free -purchase -premium -avail -claim -giveaway -participants -Telegram -winner -win -credits -token -tokens -aiART -artwork -art -cosplay -character -waifu -generated -"470EX-AI"'
-date_range_start = '2018-01-01T00:00:00Z'
-date_range_end = '2020-01-01T00:00:00Z'
+date_range_start = '2013-01-01T00:00:00Z'
+date_range_end = None
 should_classify = False
+file_path = 'data/yt_data.csv'
 
 # init the classifier
 classifier = transformers.pipeline('sentiment-analysis',
                                    'distilbert-base-uncased-finetuned-sst-2-english')
 
-comments = []
 next_vid_page_token = None
 for vid_page_i in range(math.ceil(num_vids / 50)):
+  comments = []
   # fetch some videos - construct params
   vid_req_params = {
       'key': key,
@@ -66,6 +67,7 @@ for vid_page_i in range(math.ceil(num_vids / 50)):
     next_com_page_token = None
     vid_comments = []
     for com_page_i in range(100):
+      if com_page_i > 0: print(f'{com_page_i=}')
       com_req_params = {
           'key': key,
           'part': 'snippet',
@@ -94,8 +96,9 @@ for vid_page_i in range(math.ceil(num_vids / 50)):
                               'text': com['snippet']['topLevelComment']['snippet']['textDisplay'],
                               'username': com['snippet']['topLevelComment']['snippet']['authorDisplayName'],
                               'date': com['snippet']['topLevelComment']['snippet']['publishedAt'],
+                              'country': None,
                               'likes': com['snippet']['topLevelComment']['snippet']['likeCount'],
-                              'n_children': com['snippet']['totalReplyCount'],
+                              'n_children': com['snippet']['totalReplyCount'], # TODO: get the children
                               'title': vid['title'],
                               'platform': 'youtube',
                               'meta': {
@@ -116,6 +119,7 @@ for vid_page_i in range(math.ceil(num_vids / 50)):
         vid_comments[com_i]['sentiment_score'] = cls['score']
 
     # get the channel of the users who posted each comment to find the country
+    # TODO: this could be more efficient - sometimes vid_comments is short, we can instead fetch comments for the `comments` array all at once to better batch things
     for chan_page_i in range(math.ceil(len(vid_comments) / 50)):
       page_comments = vid_comments[chan_page_i*50 : (chan_page_i+1)*50]
       chan_res = requests.get('https://www.googleapis.com/youtube/v3/channels', {
@@ -128,14 +132,17 @@ for vid_page_i in range(math.ceil(num_vids / 50)):
         print(chan_res['error'])
         continue
       for chan in chan_res['items']: # match the channel with the comment (the order isn't synced)
-        country = chan['snippet']['country'] if 'country' in chan['snippet'] else None
+        if 'country' not in chan['snippet']: continue
         for com in vid_comments:
-          if com['meta']['user_id'] == chan['id']: com['country'] = country
+          if com['meta']['user_id'] == chan['id']:
+            com['country'] = chan['snippet']['country']
     
     # append to global results array
     for com in vid_comments: comments.append(com)
 
-# save the fetched data
-df = pd.DataFrame(comments)
-print(f'{df.shape=}')
-df.to_csv('data/yt_data.csv')
+  # save the fetched data for this page
+  df = pd.DataFrame(comments)
+  print(f'{df.shape=}')
+  if vid_page_i > 0 or os.path.exists(file_path): # if file exists, append
+    df.to_csv(file_path, mode='a', header=False)
+  else: df.to_csv(file_path)
