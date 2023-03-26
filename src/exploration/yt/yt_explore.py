@@ -8,8 +8,8 @@ import pandas as pd
 sys.path.append(os.path.abspath('.'))
 from src.constants import google_key as key
 
-num_comments = 1e5
-query = 'AI'
+num_vids = 1e3
+query = 'ai|"artificial intelligence" -ad -free -purchase -premium -avail -claim -giveaway -participants -Telegram -winner -win -credits -token -tokens -aiART -artwork -art -cosplay -character -waifu -generated -"470EX-AI"'
 date_range_start = '2018-01-01T00:00:00Z'
 date_range_end = '2020-01-01T00:00:00Z'
 should_classify = False
@@ -19,20 +19,21 @@ classifier = transformers.pipeline('sentiment-analysis',
                                    'distilbert-base-uncased-finetuned-sst-2-english')
 
 comments = []
-next_page_token = None
-for page_i in range(math.ceil(num_comments / (50*50))):
+next_vid_page_token = None
+for vid_page_i in range(math.ceil(num_vids / 50)):
   # fetch some videos - construct params
   vid_req_params = {
       'key': key,
       'part': 'snippet',
       'q': query,
-      'maxResults': 50,
+      'maxResults': 50 if num_vids >= 50 else num_vids,
+      'relevanceLanguage': 'en',
   }
-  if next_page_token is not None: # pagination
-    if next_page_token is '_INVALID_':
-      print(f"Invalid next page token for {page_i=}")
+  if next_vid_page_token is not None: # pagination
+    if next_vid_page_token == '_INVALID_':
+      print(f"Invalid next video page token for {vid_page_i=}")
       break
-    vid_req_params['pageToken'] = next_page_token
+    vid_req_params['pageToken'] = next_vid_page_token
 
   # date range
   if date_range_start is not None:
@@ -48,8 +49,9 @@ for page_i in range(math.ceil(num_comments / (50*50))):
   if 'error' in vid_res: # TODO error handling
     print(vid_res['error'])
     continue
-   # store page token
-  next_page_token = vid_res['nextPageToken'] if 'nextPageToken' in vid_res else '_INVALID_'
+  # store page token
+  if 'nextPageToken' in vid_res: next_vid_page_token = vid_res['nextPageToken']
+  else: next_vid_page_token = '_INVALID_'
   videos = [{'id': x['id']['videoId'],
             'title': x['snippet']['title'],
             'date': x['snippet']['publishedAt'],
@@ -59,31 +61,52 @@ for page_i in range(math.ceil(num_comments / (50*50))):
 
   # for each video, get the comments
   for vid_i, vid in enumerate(videos):
-    print(f'{page_i=} {vid_i=}')
-    # fetch comments
-    com_res = requests.get('https://www.googleapis.com/youtube/v3/commentThreads', {
-        'key': key,
-        'part': 'snippet',
-        'videoId': vid['id'],
-        'maxResults': 50,
-        'textFormat': 'plainText',
-    }).json()
-    if 'error' in com_res: # TODO error handling
-      if 'disabled comments.' not in com_res['error']['message']:
-        print(com_res['error'])
-      continue
-    if len(com_res['items']) == 0:
-      # no comments
-      continue
-    vid_comments = [{'id': x['id'],
-                'text': x['snippet']['topLevelComment']['snippet']['textDisplay'],
-                'channel': x['snippet']['topLevelComment']['snippet']['authorChannelId']['value'],
-                'date': x['snippet']['topLevelComment']['snippet']['publishedAt'],
-                'vid_id': vid['id'],
-                'vid_title': vid['title'],
-                'vid_date': vid['date'],
-                }
-                for x in com_res['items']]
+    print(f'{vid_page_i=} {vid_i=}')
+    # fetch comments (with pagination so that we get all of them)
+    next_com_page_token = None
+    vid_comments = []
+    for com_page_i in range(100):
+      com_req_params = {
+          'key': key,
+          'part': 'snippet',
+          'videoId': vid['id'],
+          'maxResults': 100,
+          'textFormat': 'plainText',
+      }
+      if next_com_page_token is not None: # pagination
+        if next_com_page_token == '_INVALID_': break
+        com_req_params['pageToken'] = next_com_page_token
+      com_res = requests.get('https://www.googleapis.com/youtube/v3/commentThreads',
+                             com_req_params).json()
+      if 'error' in com_res: # TODO error handling
+        if 'disabled comments.' not in com_res['error']['message']:
+          print(com_res['error'])
+        continue
+      # store page token
+      if 'nextPageToken' in com_res: next_com_page_token = com_res['nextPageToken']
+      else: next_com_page_token = '_INVALID_'
+      if len(com_res['items']) == 0:
+        # no comments
+        continue
+      for com in com_res['items']:
+        try:
+          vid_comments.append({'id': com['id'],
+                              'text': com['snippet']['topLevelComment']['snippet']['textDisplay'],
+                              'username': com['snippet']['topLevelComment']['snippet']['authorDisplayName'],
+                              'date': com['snippet']['topLevelComment']['snippet']['publishedAt'],
+                              'likes': com['snippet']['topLevelComment']['snippet']['likeCount'],
+                              'n_children': com['snippet']['totalReplyCount'],
+                              'title': vid['title'],
+                              'platform': 'youtube',
+                              'meta': {
+                                'vid_id': vid['id'],
+                                'user_id': com['snippet']['topLevelComment']['snippet']['authorChannelId']['value'],
+                                'vid_date': vid['date'],
+                              }
+                              })
+        except:
+          pass
+
 
     if should_classify:
       # classify the text
@@ -92,20 +115,22 @@ for page_i in range(math.ceil(num_comments / (50*50))):
         vid_comments[com_i]['sentiment_label'] = cls['label']
         vid_comments[com_i]['sentiment_score'] = cls['score']
 
-    # get the channel of the user who posted it to find the country
-    chan_res = requests.get('https://www.googleapis.com/youtube/v3/channels', {
-        'key': key,
-        'part': 'snippet',
-        'id': ','.join([c['channel'] for c in vid_comments[:50]]),
-        'maxResults': 50,
-    }).json()
-    if 'error' in chan_res: # TODO error handling
-      print(chan_res['error'])
-      continue
-    for chan in chan_res['items']: # match the channel with the comment (the order isn't synced)
-      country = chan['snippet']['country'] if 'country' in chan['snippet'] else None
-      for com in vid_comments:
-        if com['channel'] == chan['id']: com['country'] = country
+    # get the channel of the users who posted each comment to find the country
+    for chan_page_i in range(math.ceil(len(vid_comments) / 50)):
+      page_comments = vid_comments[chan_page_i*50 : (chan_page_i+1)*50]
+      chan_res = requests.get('https://www.googleapis.com/youtube/v3/channels', {
+          'key': key,
+          'part': 'snippet',
+          'id': ','.join([c['meta']['user_id'] for c in page_comments]),
+          'maxResults': 50,
+      }).json()
+      if 'error' in chan_res: # TODO error handling
+        print(chan_res['error'])
+        continue
+      for chan in chan_res['items']: # match the channel with the comment (the order isn't synced)
+        country = chan['snippet']['country'] if 'country' in chan['snippet'] else None
+        for com in vid_comments:
+          if com['meta']['user_id'] == chan['id']: com['country'] = country
     
     # append to global results array
     for com in vid_comments: comments.append(com)
