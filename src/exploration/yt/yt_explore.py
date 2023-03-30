@@ -144,5 +144,5 @@ for vid_page_i in range(math.ceil(num_vids / 50)):
   df = pd.DataFrame(comments)
   print(f'{df.shape=}')
   if vid_page_i > 0 or os.path.exists(file_path): # if file exists, append
-    df.to_csv(file_path, mode='a', header=False)
-  else: df.to_csv(file_path)
+    df.to_csv(file_path, mode='a', header=False, index=False)
+  else: df.to_csv(file_path, index=False)
