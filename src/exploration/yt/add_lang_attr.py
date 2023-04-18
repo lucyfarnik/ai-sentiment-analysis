@@ -4,15 +4,19 @@ import math
 from tqdm import tqdm
 import os
 
-from_path = 'data/yt_data2.csv'
-to_path = 'data/yt_w_langs.csv'
-
-df = pd.read_csv(from_path)
+df = []
+for file in os.listdir('data/yt_stages/no_duplicates'):
+  df.append(pd.read_csv('data/yt_stages/no_duplicates/' + file))
+df = pd.concat(df)
 
 # remove data we've already processed
-if os.path.exists('data/yt_w_langs.csv'):
-  already_done = pd.read_csv('data/yt_w_langs.csv')
-  df = df[~df['id'].isin(already_done['id'])]
+done_df = []
+for file in os.listdir('data/yt_stages/w_langs'):
+  done_df.append(pd.read_csv('data/yt_stages/w_langs/' + file))
+done_df = pd.concat(done_df)
+df = df[~df['id'].isin(done_df['id'])]
+
+file_path = 'data/yt_stages/w_langs/yt_w_langs_3.csv'
 
 lang_cls = transformers.pipeline('text-classification',
                                  'papluca/xlm-roberta-base-language-detection',
@@ -31,6 +35,6 @@ for batch_i in tqdm(range(math.ceil(df.shape[0] / batch_size))):
     df.loc[batch_size*batch_i + i, 'lang'] = lang['label']
   batch = df[batch_size*batch_i : batch_size*(batch_i+1)]
   # save
-  if batch_i > 0 or os.path.exists(to_path): # if file exists, append
-    batch.to_csv(to_path, mode='a', header=False, index=False)
-  else: batch.to_csv(to_path, index=False)
+  if batch_i > 0 or os.path.exists(file_path): # if file exists, append
+    batch.to_csv(file_path, mode='a', header=False, index=False)
+  else: batch.to_csv(file_path, index=False)

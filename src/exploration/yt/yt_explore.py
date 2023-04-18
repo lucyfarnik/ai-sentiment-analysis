@@ -13,7 +13,7 @@ query = 'AI|"artificial intelligence"|ChatGPT|OpenAI|DeepMind -ad -free -purchas
 date_range_start = '2013-01-01T00:00:00Z'
 date_range_end = None
 should_classify = False
-file_path = 'data/yt_data2.csv'
+file_path = 'data/yt_raw/yt_data3.csv'
 
 # init the classifier
 classifier = transformers.pipeline('sentiment-analysis',
