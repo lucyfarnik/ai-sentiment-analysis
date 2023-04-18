@@ -12,11 +12,10 @@ batch_size = 20
 df = pd.read_csv('data/yt_w_langs_en.csv')
 df['sentiment'] = None
 
-# check which rows have already been processed
+# filter out datapoints that have already been processed
 if os.path.exists(file_path):
-  df_done = pd.read_csv(file_path)
-  done_count = df_done.shape[0]
-else: done_count = 0
+    df_done = pd.read_csv(file_path)
+    df = df[~df['id'].isin(df_done['id'])]
 
 if torch.cuda.is_available(): device = 'cuda'
 elif torch.backends.mps.is_available(): device = 'mps'
@@ -40,7 +39,7 @@ def classify(inputs):
             results[i].append(model_result[i])
     return results
 
-for batch_i in tqdm(range(done_count//batch_size, math.ceil(df.shape[0] / batch_size))):
+for batch_i in tqdm(range(math.ceil(df.shape[0] / batch_size))):
     batch = df[batch_size*batch_i : batch_size*(batch_i+1)] # slice data into batches
     batch_text = batch['text'].to_list()
     for i, txt in enumerate(batch_text):

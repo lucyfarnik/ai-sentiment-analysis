@@ -8,12 +8,12 @@ import pandas as pd
 sys.path.append(os.path.abspath('.'))
 from src.constants import google_key as key
 
-num_vids = 1e4
-query = 'ai|"artificial intelligence" -ad -free -purchase -premium -avail -claim -giveaway -participants -Telegram -winner -win -credits -token -tokens -aiART -artwork -art -cosplay -character -waifu -generated -"470EX-AI"'
+num_vids = 1e6
+query = 'AI|"artificial intelligence"|ChatGPT|OpenAI|DeepMind -ad -free -purchase -premium -avail -claim -giveaway -participants -Telegram -winner -win -credits -token -tokens -aiART -artwork -art -cosplay -character -waifu -generated -"470EX-AI"'
 date_range_start = '2013-01-01T00:00:00Z'
 date_range_end = None
 should_classify = False
-file_path = 'data/yt_data.csv'
+file_path = 'data/yt_data2.csv'
 
 # init the classifier
 classifier = transformers.pipeline('sentiment-analysis',
