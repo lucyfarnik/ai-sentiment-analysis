@@ -12,12 +12,7 @@ num_vids = 1e6
 query = 'AI|"artificial intelligence"|ChatGPT|OpenAI|DeepMind -ad -free -purchase -premium -avail -claim -giveaway -participants -Telegram -winner -win -credits -token -tokens -aiART -artwork -art -cosplay -character -waifu -generated -"470EX-AI"'
 date_range_start = '2013-01-01T00:00:00Z'
 date_range_end = None
-should_classify = False
 file_path = 'data/yt_raw/yt_data3.csv'
-
-# init the classifier
-classifier = transformers.pipeline('sentiment-analysis',
-                                   'distilbert-base-uncased-finetuned-sst-2-english')
 
 next_vid_page_token = None
 for vid_page_i in range(math.ceil(num_vids / 50)):
@@ -110,16 +105,9 @@ for vid_page_i in range(math.ceil(num_vids / 50)):
         except:
           pass
 
-
-    if should_classify:
-      # classify the text
-      cls_res = classifier([com['text'][:512] for com in vid_comments])
-      for com_i, cls in enumerate(cls_res):
-        vid_comments[com_i]['sentiment_label'] = cls['label']
-        vid_comments[com_i]['sentiment_score'] = cls['score']
-
     # get the channel of the users who posted each comment to find the country
-    # TODO: this could be more efficient - sometimes vid_comments is short, we can instead fetch comments for the `comments` array all at once to better batch things
+    # (note: this could be more efficient - sometimes vid_comments is short,
+    # we can instead fetch comments for the `comments` array all at once to better batch things)
     for chan_page_i in range(math.ceil(len(vid_comments) / 50)):
       page_comments = vid_comments[chan_page_i*50 : (chan_page_i+1)*50]
       chan_res = requests.get('https://www.googleapis.com/youtube/v3/channels', {
