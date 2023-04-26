@@ -84,7 +84,7 @@ for i, row in tqdm(df.iterrows(), total=df.shape[0]):
 
   # save the results in batches of 100
   if i % 100 == 0 and i > 0:
-    batch = df[i-100:i].reset_index(drop=True) #! FIXME batch['Sentiment'] is null here
+    batch = df[i-100:i].reset_index(drop=True)
     if os.path.exists(to_path): # if file exists, append
       batch.to_csv(to_path, mode='a', header=False, index=False)
     else: batch.to_csv(to_path, index=False)
