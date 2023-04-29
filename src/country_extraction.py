@@ -1,19 +1,35 @@
 from functools import partial
 import time
+import os
 import pandas as pd
 import pycountry
 from geopy.geocoders import Nominatim
 
 def extract_country():
   file_path = 'data/merged_data_sentiment.csv'
+  temp_file_path = 'data/merged_data_sentiment_temp.csv'
 
   df = pd.read_csv(file_path)
-  df['Country'] = None
+  if os.path.exists(temp_file_path):
+    df_done = pd.read_csv(temp_file_path)
+    ids_done = df_done['ID'].values
+  else:
+    ids_done = []
+  if 'Country' not in df.columns:
+    df['Country'] = None
 
   geolocator = Nominatim(user_agent="ads_coursework")
   for i, row in df.iterrows():
+    # if the country has already been extracted, just add the country code already there and skip
+    if row['ID'] in ids_done:
+      df.at[i, 'Country'] = df_done[df_done['ID'] == row['ID']]['Country'].values[0]
+      continue
+
     if i % 100 == 0:
       print(f"{i=}")
+    if (i > 64000 and i % 10 == 0) or (i % 1000 == 0 and i > 0):
+      # save temporary progress (only the part already processed)
+      df.iloc[:i].to_csv(temp_file_path, index=False)
 
     location = row['Location']
     if type(location) is not str:
@@ -42,7 +58,7 @@ def extract_country():
         else:
           print(f"Location couldn't be parsed: {location=}")
           df.at[i, 'Country'] = None
-        continue
+          continue
       country_obj = pycountry.countries.search_fuzzy(country)
       if len(country_obj) == 0:
         print(f"Location couldn't be parsed: {country=} (location = {location})")
@@ -68,6 +84,10 @@ def extract_country():
     df.at[i, 'Country'] = country_obj.alpha_3
 
   df.to_csv(file_path, index=False)
+
+  # delete temporary file
+  if os.path.exists(temp_file_path):
+    os.remove(temp_file_path)
 
 if __name__ == '__main__':
   extract_country()
