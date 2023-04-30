@@ -31,7 +31,13 @@ def merge_datasets():
   # Read the twitter data
   twitter = pd.read_csv('tweets2020.csv', dtype={'ID': str})
   for i, row in twitter.iterrows():
-    twitter.at[i, 'Date'] = row['Date'][:10]
+    date = row['Date']
+    if len(date) > 10:
+      date = date[:10]
+    if '/' in date:
+      month, day, year = date.split('/')
+      date = f"{year}-{month}-{day}"
+    twitter.at[i, 'Date'] = date
   print(f"Twitter: {twitter.shape[0]} rows")
 
   # Merge the datasets
