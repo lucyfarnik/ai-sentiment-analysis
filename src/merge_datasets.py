@@ -19,6 +19,7 @@ def merge_datasets():
   youtube = youtube[youtube['Date'] != 'CZ']
   for i, row in youtube.iterrows():
     youtube.at[i, 'Date'] = row['Date'][:10]
+  youtube['Platform'] = 'YouTube'
   print(f"Youtube: {youtube.shape[0]} rows")
 
   # Read the reddit data
@@ -26,6 +27,7 @@ def merge_datasets():
   for i, row in reddit.iterrows():
     day, month, year = row['Date'].split(' ')[0].split('/')
     reddit.at[i, 'Date'] = f'{year}-{month}-{day}'
+  reddit['Platform'] = 'Reddit'
   print(f"Reddit: {reddit.shape[0]} rows")
 
   # Read the twitter data
@@ -38,6 +40,7 @@ def merge_datasets():
       month, day, year = date.split('/')
       date = f"{year}-{month}-{day}"
     twitter.at[i, 'Date'] = date
+  twitter['Platform'] = 'Twitter'
   print(f"Twitter: {twitter.shape[0]} rows")
 
   # Merge the datasets
