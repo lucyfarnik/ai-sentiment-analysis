@@ -14,7 +14,6 @@ The dataset located in `AI_sentiment_dataset.csv` contains the following attribu
 | Attribute | Description |
 | --- | --- |
 | Content | The text of the social media post/comment |
-| User | Username of the person who posted it |
 | Date | Date the post/comment was posted. Format: YYYY-MM-DD |
 | Reactions | Number of likes/upvotes. Can be negative for Reddit data. |
 | N_Children | Number of replies to the post/comment. Note that the dataset does not include replies |
