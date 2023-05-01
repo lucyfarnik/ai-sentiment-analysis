@@ -20,7 +20,7 @@ The dataset located in `AI_sentiment_dataset.csv` contains the following attribu
 | N_Children | Number of replies to the post/comment. Note that the dataset does not include replies |
 | Post Title | Title of the YouTube video/Reddit post the comment is under |
 | Platform | One of `['YouTube', 'Reddit', 'Twitter']` |
-| Country | 3-letter country code following [ISO 3166 Alpha-3](https://www.iban.com/country-codes) |
+| Country | 3-letter country code following [ISO 3166 Alpha-3](https://www.iban.com/country-codes). Note that this column is empty for all Reddit data and most of YouTube data. |
 
 ## Source code
 The code used to gather the data is in `src/gathering`. To present findings
