@@ -23,7 +23,7 @@ def merge_datasets():
   print(f"Youtube: {youtube.shape[0]} rows")
 
   # Read the reddit data
-  reddit = pd.read_csv('reddit_data.csv')
+  reddit = pd.read_csv('data/reddit_data.csv')
   for i, row in reddit.iterrows():
     day, month, year = row['Date'].split(' ')[0].split('/')
     reddit.at[i, 'Date'] = f'{year}-{month}-{day}'
@@ -31,7 +31,7 @@ def merge_datasets():
   print(f"Reddit: {reddit.shape[0]} rows")
 
   # Read the twitter data
-  twitter = pd.read_csv('tweets2020.csv', dtype={'ID': str})
+  twitter = pd.read_csv('data/twitter/tweets2020.csv', dtype={'ID': str})
   for i, row in twitter.iterrows():
     date = row['Date']
     if len(date) > 10:
